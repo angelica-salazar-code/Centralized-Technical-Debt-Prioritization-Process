@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cross-SBU ADO Prioritization — Intake Workflow</title>
+<style>
+  :root {
+    --bg: #f3f4f6; --card: #ffffff; --border: #e5e7eb;
+    --blue: #3b82f6; --green: #22c55e; --amber: #f59e0b; --red: #ef4444;
+    --purple: #8b5cf6; --teal: #14b8a6; --gray600: #4b5563; --gray400: #9ca3af;
+    --navy: #0f172a; --shadow: 0 1px 3px rgba(0,0,0,.08);
+    --mss: #3b82f6; --scim: #8b5cf6; --ai: #14b8a6; --tpc: #f59e0b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); color: #1f2937; }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+    color: #fff; padding: 18px 32px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header .subtitle { font-size: 12px; opacity: .65; margin-top: 2px; }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .header-badge {
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2);
+    padding: 5px 14px; border-radius: 6px; font-size: 12px; color: #fff;
+  }
+  .header-badge strong { color: #fbbf24; }
+
+  /* ── Container ── */
+  .container { max-width: 1440px; margin: 0 auto; padding: 24px 28px; }
+
+  /* ── Pipeline Steps ── */
+  .pipeline { display: flex; gap: 0; margin-bottom: 28px; position: relative; }
+  .pipe-stage {
+    flex: 1; text-align: center; padding: 18px 10px; position: relative;
+    background: var(--card); border: 1px solid var(--border); cursor: pointer;
+    transition: all .2s;
+  }
+  .pipe-stage:first-child { border-radius: 10px 0 0 10px; }
+  .pipe-stage:last-child { border-radius: 0 10px 10px 0; }
+  .pipe-stage .pipe-num {
+    width: 28px; height: 28px; border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center; font-size: 13px; font-weight: 700;
+    background: #e5e7eb; color: var(--gray600); margin-bottom: 6px;
+  }
+  .pipe-stage .pipe-label { font-size: 12px; color: var(--gray400); text-transform: uppercase; letter-spacing: .3px; }
+  .pipe-stage.active { background: #eff6ff; border-color: var(--blue); }
+  .pipe-stage.active .pipe-num { background: var(--blue); color: #fff; }
+  .pipe-stage.active .pipe-label { color: var(--blue); font-weight: 600; }
+  .pipe-stage.done { background: #f0fdf4; border-color: var(--green); }
+  .pipe-stage.done .pipe-num { background: var(--green); color: #fff; }
+  .pipe-stage.done .pipe-label { color: var(--green); }
+  .pipe-arrow { display: flex; align-items: center; font-size: 18px; color: var(--gray400); padding: 0 2px; }
+
+  /* ── Step Panels ── */
+  .step-panel { display: none; }
+  .step-panel.visible { display: block; }
+
+  /* ── Section Title ── */
+  .section-title {
+    font-size: 15px; font-weight: 700; color: var(--gray600); margin-bottom: 14px;
+    text-transform: uppercase; letter-spacing: .5px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title::before { content: ''; width: 4px; height: 18px; border-radius: 2px; }
+  .st-blue::before { background: var(--blue); }
+  .st-green::before { background: var(--green); }
+  .st-purple::before { background: var(--purple); }
+  .st-amber::before { background: var(--amber); }
+  .st-teal::before { background: var(--teal); }
+  .st-red::before { background: var(--red); }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--card); border-radius: 10px; padding: 20px;
+    box-shadow: var(--shadow); margin-bottom: 18px;
+  }
+  .card h3 { font-size: 14px; font-weight: 600; margin-bottom: 14px; color: var(--gray600); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-bottom: 18px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 18px; }
+
+  /* ── KPI ── */
+  .kpi {
+    background: var(--card); border-radius: 10px; padding: 18px 16px;
+    box-shadow: var(--shadow); text-align: center; position: relative; overflow: hidden;
+  }
+  .kpi .bar { position: absolute; top: 0; left: 0; right: 0; height: 4px; }
+  .kpi .label { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--gray400); }
+  .kpi .value { font-size: 30px; font-weight: 800; margin: 6px 0 2px; }
+
+  /* ── SBU Intake Cards ── */
+  .sbu-card {
+    background: var(--card); border-radius: 10px; padding: 18px;
+    box-shadow: var(--shadow); border-top: 4px solid #ddd;
+  }
+  .sbu-card.sbu-mss { border-top-color: var(--mss); }
+  .sbu-card.sbu-scim { border-top-color: var(--scim); }
+  .sbu-card.sbu-ai { border-top-color: var(--ai); }
+  .sbu-card.sbu-tpc { border-top-color: var(--tpc); }
+  .sbu-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .sbu-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .sbu-card .item-count { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+  .sbu-card .item-label { font-size: 11px; color: var(--gray400); text-transform: uppercase; }
+
+  /* ── Form Elements ── */
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--gray600); margin-bottom: 4px; }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: inherit;
+  }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+  .form-group select { appearance: auto; cursor: pointer; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: 2px solid var(--blue); border-color: var(--blue);
+  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+
+  /* ── Table ── */
+  .table-wrap {
+    background: var(--card); border-radius: 10px; box-shadow: var(--shadow);
+    overflow-x: auto; margin-bottom: 18px;
+  }
+  .table-header {
+    padding: 14px 20px; display: flex; justify-content: space-between;
+    align-items: center; border-bottom: 1px solid var(--border);
+  }
+  .table-header h3 { font-size: 14px; font-weight: 600; }
+  .table-header .search {
+    padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 12px; width: 220px;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: #f8f9fb; padding: 10px 14px; font-size: 11px; text-transform: uppercase;
+    color: var(--gray400); letter-spacing: .4px; border-bottom: 1px solid var(--border);
+    text-align: left; cursor: pointer; white-space: nowrap;
+  }
+  th:hover { color: var(--blue); }
+  td {
+    padding: 10px 14px; border-bottom: 1px solid #f5f5f5;
+    font-size: 13px; white-space: nowrap;
+  }
+  tr:hover { background: #f8faff; }
+  .badge {
+    padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
+    display: inline-block;
+  }
+  .badge-mss { background: #dbeafe; color: #1d4ed8; }
+  .badge-scim { background: #ede9fe; color: #6d28d9; }
+  .badge-ai { background: #ccfbf1; color: #0d9488; }
+  .badge-tpc { background: #fef3c7; color: #b45309; }
+  .badge-critical { background: #fee2e2; color: #b91c1c; }
+  .badge-high { background: #ffedd5; color: #c2410c; }
+  .badge-medium { background: #fef9c3; color: #a16207; }
+  .badge-low { background: #f0fdf4; color: #15803d; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 8px 20px; border: none; border-radius: 6px; font-size: 13px;
+    font-weight: 600; cursor: pointer; transition: all .2s; display: inline-flex;
+    align-items: center; gap: 6px;
+  }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-success { background: var(--green); color: #fff; }
+  .btn-success:hover { background: #16a34a; }
+  .btn-warning { background: var(--amber); color: #fff; }
+  .btn-warning:hover { background: #d97706; }
+  .btn-danger { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-outline {
+    background: transparent; border: 1px solid var(--border); color: var(--gray600);
+  }
+  .btn-outline:hover { background: #f8f9fb; }
+
+  .btn-group { display: flex; gap: 10px; margin-top: 14px; }
+
+  /* ── Criteria Scoring ── */
+  .criteria-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .criteria-item {
+    border: 1px solid var(--border); border-radius: 8px; padding: 14px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .criteria-item .crit-label { font-size: 13px; font-weight: 600; }
+  .criteria-item .crit-desc { font-size: 11px; color: var(--gray400); margin-top: 2px; }
+  .criteria-item select {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; width: 80px; text-align: center;
+  }
+
+  /* ── Approval Panel ── */
+  .approval-card {
+    border: 2px solid var(--amber); border-radius: 10px; padding: 24px;
+    background: #fffbeb; margin-bottom: 18px;
+  }
+  .approval-card h3 { color: #92400e; font-size: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .approval-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #fde68a;
+  }
+  .approval-item:last-child { border-bottom: none; }
+
+  /* ── Final Summary ── */
+  .summary-timeline {
+    border-left: 3px solid var(--blue); padding-left: 20px; margin: 14px 0;
+  }
+  .tl-item { margin-bottom: 16px; position: relative; }
+  .tl-item::before {
+    content: ''; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--blue); position: absolute; left: -27px; top: 4px;
+  }
+  .tl-item.tl-done::before { background: var(--green); }
+  .tl-item .tl-title { font-size: 13px; font-weight: 600; }
+  .tl-item .tl-meta { font-size: 11px; color: var(--gray400); margin-top: 2px; }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: #1e293b; color: #fff;
+    padding: 14px 22px; border-radius: 8px; font-size: 13px; box-shadow: 0 4px 12px rgba(0,0,0,.2);
+    transform: translateY(80px); opacity: 0; transition: all .3s; z-index: 999;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+
+  /* ── Misc ── */
+  .text-right { text-align: right; }
+  .text-center { text-align: center; }
+  .mt-2 { margin-top: 14px; }
+  .mb-2 { margin-bottom: 14px; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .empty-state { text-align: center; padding: 40px; color: var(--gray400); font-size: 14px; }
+  .score-pill {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 36px; height: 24px; border-radius: 12px; font-size: 12px; font-weight: 700;
+  }
+  .drag-handle { cursor: grab; color: var(--gray400); font-size: 16px; margin-right: 8px; }
+  .capacity-bar { height: 8px; border-radius: 4px; background: #e5e7eb; overflow: hidden; margin-top: 6px; }
+  .capacity-fill { height: 100%; border-radius: 4px; transition: width .4s; }
+</style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="header">
+  <div>
+    <h1>Cross-SBU ADO Prioritization</h1>
+    <div class="subtitle">Automation Workflow — Intake &amp; Triage Process</div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge">Planning Cycle: <strong>FY27 S1</strong></div>
+    <div class="header-badge">Items: <strong id="headerTotal">0</strong></div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ── Pipeline ── -->
+  <div class="pipeline" id="pipeline">
+    <div class="pipe-stage active" onclick="goToStep(0)">
+      <div class="pipe-num">1</div>
+      <div class="pipe-label">Roll-up</div>
+    </div>
+    <div class="pipe-arrow">›</div>
+    <div class="pipe-stage" onclick="goToStep(1)">
+      <div class="pipe-num">2</div>
+      <div class="pipe-label">Triage &amp; Prioritize</div>
+    </div>
+    <div class="pipe-arrow">›</div>
+    <div class="pipe-stage" onclick="goToStep(2)">
+      <div class="pipe-num">3</div>
+      <div class="pipe-label">Prioritized Output</div>
+    </div>
+    <div class="pipe-arrow">›</div>
+    <div class="pipe-stage" onclick="goToStep(3)">
+      <div class="pipe-num">4</div>
+      <div class="pipe-label">Biz &amp; Eng Alignment</div>
+    </div>
+    <div class="pipe-arrow">›</div>
+    <div class="pipe-stage" onclick="goToStep(4)">
+      <div class="pipe-num">5</div>
+      <div class="pipe-label">Final / Create</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- STEP 1 — ROLL-UP                              -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="step-panel visible" id="step0">
+    <div class="section-title st-blue">Step 1 — Roll-up: Collect &amp; Classify ADOs</div>
+
+    <!-- SBU KPIs -->
+    <div class="grid-4" id="sbuKpis">
+      <div class="sbu-card sbu-mss">
+        <h4><span class="sbu-dot" style="background:var(--mss)"></span> MSS</h4>
+        <div class="item-count" id="countMSS">0</div>
+        <div class="item-label">ADO Items</div>
+      </div>
+      <div class="sbu-card sbu-scim">
+        <h4><span class="sbu-dot" style="background:var(--scim)"></span> SCIM</h4>
+        <div class="item-count" id="countSCIM">0</div>
+        <div class="item-label">ADO Items</div>
+      </div>
+      <div class="sbu-card sbu-ai">
+        <h4><span class="sbu-dot" style="background:var(--ai)"></span> A&amp;I</h4>
+        <div class="item-count" id="countAI">0</div>
+        <div class="item-label">ADO Items</div>
+      </div>
+      <div class="sbu-card sbu-tpc">
+        <h4><span class="sbu-dot" style="background:var(--tpc)"></span> TPC</h4>
+        <div class="item-count" id="countTPC">0</div>
+        <div class="item-label">ADO Items</div>
+      </div>
+    </div>
+
+    <!-- Add ADO Form -->
+    <div class="card">
+      <h3>➕ Submit New ADO Item</h3>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label>Source SBU</label>
+          <select id="addSbu">
+            <option value="MSS">MSS</option>
+            <option value="SCIM">SCIM</option>
+            <option value="A&I">A&I</option>
+            <option value="TPC">TPC</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>ADO ID</label>
+          <input type="text" id="addAdoId" placeholder="e.g. 123456">
+        </div>
+        <div class="form-group">
+          <label>Work Item Type</label>
+          <select id="addType">
+            <option value="Feature">Feature</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" id="addTitle" placeholder="Work item title">
+        </div>
+        <div class="form-group">
+          <label>Requested By</label>
+          <input type="text" id="addRequestor" placeholder="Name or alias">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Description / Business Justification</label>
+        <textarea id="addDesc" placeholder="What is this? Why is it needed?"></textarea>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="addItem()">Add to Roll-up</button>
+        <button class="btn btn-outline" onclick="loadSampleData()">Load Sample Data</button>
+      </div>
+    </div>
+
+    <!-- Roll-up Table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>All Submitted ADOs</h3>
+        <input class="search" id="rollupSearch" placeholder="🔍 Search items…" oninput="renderRollupTable()">
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>SBU</th><th>ADO ID</th><th>Type</th><th>Title</th>
+            <th>Requestor</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rollupBody"></tbody>
+      </table>
+      <div class="empty-state" id="rollupEmpty">No items submitted yet. Add ADOs above or load sample data.</div>
+    </div>
+
+    <div class="btn-group" style="justify-content:flex-end;">
+      <button class="btn btn-primary" onclick="goToStep(1)">Proceed to Triage →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- STEP 2 — TRIAGE & PRIORITIZE                  -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="step-panel" id="step1">
+    <div class="section-title st-purple">Step 2 — Triage &amp; Prioritization</div>
+
+    <div class="card mb-2">
+      <h3>🎯 FY27 Prioritization Criteria</h3>
+      <p style="font-size:12px;color:var(--gray400);margin-bottom:14px;">
+        Score each item 1–5 against the FY27 goals below. Items are auto-ranked by composite score.
+      </p>
+      <div class="criteria-grid" id="criteriaRef">
+        <div class="criteria-item">
+          <div><div class="crit-label">USD Impact</div><div class="crit-desc">Estimated dollar savings / cost avoidance</div></div>
+          <div class="score-pill" style="background:#fef3c7;color:#b45309;">4</div>
+        </div>
+        <div class="criteria-item">
+          <div><div class="crit-label">Scale / Reach</div><div class="crit-desc">Volume of cases / agents / SBUs impacted</div></div>
+          <div class="score-pill" style="background:#ede9fe;color:#6d28d9;">3</div>
+        </div>
+        <div class="criteria-item">
+          <div><div class="crit-label">Strategic Alignment</div><div class="crit-desc">Alignment with FY27 exec priorities</div></div>
+          <div class="score-pill" style="background:#ccfbf1;color:#0d9488;">4</div>
+        </div>
+        <div class="criteria-item">
+          <div><div class="crit-label">CSAT Impact</div><div class="crit-desc">Customer satisfaction score improvement</div></div>
+          <div class="score-pill" style="background:#dcfce7;color:#15803d;">5</div>
+        </div>
+        <div class="criteria-item">
+          <div><div class="crit-label">TPUT Impact</div><div class="crit-desc">Throughput / time to resolution improvement</div></div>
+          <div class="score-pill" style="background:#dbeafe;color:#1d4ed8;">5</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Triage Table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>Score &amp; Triage Items</h3>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <select id="triageFilterSbu" onchange="renderTriageTable()" style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;">
+            <option value="">All SBUs</option>
+            <option value="MSS">MSS</option>
+            <option value="SCIM">SCIM</option>
+            <option value="A&I">A&I</option>
+            <option value="TPC">TPC</option>
+          </select>
+          <button class="btn btn-outline" onclick="autoScore()" title="Apply heuristic scoring">⚡ Auto-Score</button>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>SBU</th><th>ADO ID</th><th>Title</th>
+            <th>USD $</th><th>Scale</th><th>Strat.</th><th>CSAT</th><th>TPUT</th>
+            <th>Total</th><th>Priority</th>
+          </tr>
+        </thead>
+        <tbody id="triageBody"></tbody>
+      </table>
+      <div class="empty-state" id="triageEmpty" style="display:none;">No items to triage. Go back to Step 1 and add ADOs.</div>
+    </div>
+
+    <div class="btn-group" style="justify-content:space-between;">
+      <button class="btn btn-outline" onclick="goToStep(0)">← Back to Roll-up</button>
+      <button class="btn btn-primary" onclick="computePriorities(); goToStep(2);">Compute Rankings →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- STEP 3 — PRIORITIZED OUTPUT                   -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="step-panel" id="step2">
+    <div class="section-title st-green">Step 3 — Prioritized Output</div>
+
+    <div class="grid-4 mb-2">
+      <div class="kpi"><div class="bar" style="background:var(--blue)"></div><div class="label">Total Items</div><div class="value" id="outTotal">0</div></div>
+      <div class="kpi"><div class="bar" style="background:var(--red)"></div><div class="label">Critical</div><div class="value" id="outCritical">0</div></div>
+      <div class="kpi"><div class="bar" style="background:var(--amber)"></div><div class="label">High</div><div class="value" id="outHigh">0</div></div>
+      <div class="kpi"><div class="bar" style="background:var(--green)"></div><div class="label">Medium / Low</div><div class="value" id="outMedLow">0</div></div>
+    </div>
+
+    <!-- Capacity Validation -->
+    <div class="card mb-2">
+      <h3>✅ Capacity Validation</h3>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;margin-bottom:4px;">
+          <span>Capacity (days)</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span id="capUsed">0</span> /
+            <input type="number" id="capTotalInput" value="120" min="1" style="width:70px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;text-align:center;" onchange="updateCapacity()">
+            <span style="font-size:11px;color:var(--gray400);">days</span>
+          </div>
+        </div>
+        <div class="capacity-bar">
+          <div class="capacity-fill" id="capFill" style="width:0%;background:var(--green);"></div>
+        </div>
+        <div style="font-size:11px;color:var(--gray400);margin-top:6px;">
+          Set total capacity above. Assign effort per feature in the table below.
+        </div>
+      </div>
+    </div>
+
+    <!-- Ranked Table -->
+    <div class="table-wrap">
+      <div class="table-header">
+        <h3>Ranked ADO List — Agreed by CSS LT</h3>
+        <button class="btn btn-outline" onclick="exportCSV()">📥 Export CSV</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>SBU</th><th>ADO ID</th><th>Title</th>
+            <th>Base Score</th><th>Effort (days)</th><th>Adj. Score</th><th>Priority</th>
+          </tr>
+        </thead>
+        <tbody id="rankedBody"></tbody>
+      </table>
+    </div>
+
+    <div class="btn-group" style="justify-content:space-between;">
+      <button class="btn btn-outline" onclick="goToStep(1)">← Back to Triage</button>
+      <button class="btn btn-warning" onclick="goToStep(3)">Submit for Review →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- STEP 4 — BUSINESS AND ENGINEERING ALIGNMENT  -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="step-panel" id="step3">
+    <div class="section-title st-amber">Step 4 — Business and Engineering Alignment</div>
+
+    <div class="approval-card">
+      <h3>⚠️ Review &amp; Approval Checkpoint</h3>
+      <p style="font-size:13px;color:#92400e;margin-bottom:8px;">
+        The following prioritized items require CSS LT sign-off before final ADO creation.
+        Review each item and approve or defer.
+      </p>
+      <p style="font-size:12px;color:#92400e;margin-bottom:16px;font-style:italic;">
+        📌 Scope is only features ranked Critical or High Priority in Step 3.
+      </p>
+      <div id="approvalList"></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>📋 Approval Summary</h3>
+        <div style="font-size:13px;">
+          <div class="flex-between mb-2"><span>Approved</span><strong id="appApproved" style="color:var(--green);">0</strong></div>
+          <div class="flex-between"><span>Deferred</span><strong id="appDeferred" style="color:var(--amber);">0</strong></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>💬 Reviewer Notes</h3>
+        <div class="form-group">
+          <textarea id="reviewerNotes" rows="5" placeholder="Add notes for the team…"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-group" style="justify-content:space-between;">
+      <button class="btn btn-outline" onclick="goToStep(2)">← Back to Output</button>
+      <button class="btn btn-success" onclick="finalizeApproval()">Finalize &amp; Proceed →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════ -->
+  <!-- STEP 5 — FINAL / CREATE                       -->
+  <!-- ══════════════════════════════════════════════ -->
+  <div class="step-panel" id="step4">
+    <div class="section-title st-teal">Step 5 — Final / Create</div>
+
+    <div class="grid-2 mb-2">
+      <div class="kpi"><div class="bar" style="background:var(--green)"></div><div class="label">Approved for Creation</div><div class="value" id="finalApproved">0</div></div>
+      <div class="kpi"><div class="bar" style="background:var(--blue)"></div><div class="label">SXG ADOs to Create</div><div class="value" id="finalCreate">0</div></div>
+    </div>
+
+    <div class="card mb-2">
+      <h3>🚀 Actions</h3>
+        <div>
+          <p style="font-size:13px;margin-bottom:12px;">The following actions will be performed upon confirmation:</p>
+          <ul style="font-size:13px;padding-left:18px;line-height:2;">
+            <li>Auto-create SXG ADO work items for all approved items</li>
+            <li>Link child items back to originating SBU ADOs</li>
+            <li>Send confirmation email to CSS LT &amp; SBU leads</li>
+            <li>Publish roadmap to SharePoint</li>
+          </ul>
+        </div>
+      <div class="btn-group">
+        <button class="btn btn-success" onclick="executeCreate()">✅ Create SXG ADOs &amp; Publish</button>
+        <button class="btn btn-outline" onclick="goToStep(3)">← Back to Review</button>
+      </div>
+    </div>
+
+    <!-- Final Created Items -->
+    <div class="table-wrap" id="finalTableWrap" style="display:none;">
+      <div class="table-header">
+        <h3>Created SXG ADO Items</h3>
+        <button class="btn btn-outline" onclick="exportFinalCSV()">📥 Export Final CSV</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>SXG ADO ID</th><th>Source SBU</th><th>Orig. ADO</th>
+            <th>Title</th><th>Priority</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="finalBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Deferred Items for Next Sprint -->
+    <div class="table-wrap" id="deferredTableWrap" style="display:none;">
+      <div class="table-header">
+        <h3>⏸ Deferred Items — Next Sprint</h3>
+        <button class="btn btn-outline" onclick="exportDeferredCSV()">📥 Export Deferred CSV</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>SBU</th><th>ADO ID</th><th>Title</th>
+            <th>Base Score</th><th>Priority</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="deferredBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════════
+// DATA MODEL
+// ══════════════════════════════════════════════
+let items = [];
+let nextId = 1;
+let currentStep = 0;
+
+const CRITERIA = ['costUsd','scale','strategic','csat','tput'];
+const CRITERIA_WEIGHTS = { costUsd: 4, scale: 3, strategic: 4, csat: 5, tput: 5 };
+
+// ── Navigation ──
+function goToStep(n) {
+  currentStep = n;
+  document.querySelectorAll('.step-panel').forEach((p,i) => {
+    p.classList.toggle('visible', i === n);
+  });
+  const stages = document.querySelectorAll('.pipe-stage');
+  stages.forEach((s,i) => {
+    s.classList.remove('active','done');
+    if (i < n) s.classList.add('done');
+    if (i === n) s.classList.add('active');
+  });
+  if (n === 1) renderTriageTable();
+  if (n === 2) renderRankedOutput();
+  if (n === 3) renderApprovalList();
+  if (n === 4) renderFinalStep();
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ══════════════════════════════════════════════
+// STEP 1 — ROLL-UP
+// ══════════════════════════════════════════════
+function addItem() {
+  const sbu = document.getElementById('addSbu').value;
+  const adoId = document.getElementById('addAdoId').value.trim();
+  const type = document.getElementById('addType').value;
+  const title = document.getElementById('addTitle').value.trim();
+  const requestor = document.getElementById('addRequestor').value.trim();
+  const desc = document.getElementById('addDesc').value.trim();
+
+  if (!title) { showToast('Title is required.'); return; }
+  if (!adoId) { showToast('ADO ID is required.'); return; }
+
+  items.push({
+    id: nextId++, sbu, adoId, type, title, requestor, desc,
+    scores: { tput:0, csat:0, costUsd:0, scale:0, strategic:0 },
+    totalScore: 0, priority: '', approval: 'pending', sxgId: ''
+  });
+
+  // Reset form
+  document.getElementById('addAdoId').value = '';
+  document.getElementById('addTitle').value = '';
+  document.getElementById('addRequestor').value = '';
+  document.getElementById('addDesc').value = '';
+
+  updateCounts();
+  renderRollupTable();
+  showToast('Item added to roll-up.');
+}
+
+function removeItem(id) {
+  items = items.filter(i => i.id !== id);
+  updateCounts();
+  renderRollupTable();
+}
+
+function updateCounts() {
+  const counts = { MSS:0, SCIM:0, 'A&I':0, TPC:0 };
+  items.forEach(i => counts[i.sbu]++);
+  document.getElementById('countMSS').textContent = counts.MSS;
+  document.getElementById('countSCIM').textContent = counts.SCIM;
+  document.getElementById('countAI').textContent = counts['A&I'];
+  document.getElementById('countTPC').textContent = counts.TPC;
+  document.getElementById('headerTotal').textContent = items.length;
+}
+
+function renderRollupTable() {
+  const q = (document.getElementById('rollupSearch').value || '').toLowerCase();
+  const filtered = items.filter(i =>
+    !q || i.title.toLowerCase().includes(q) || i.adoId.toLowerCase().includes(q) || i.sbu.toLowerCase().includes(q)
+  );
+  const tbody = document.getElementById('rollupBody');
+  const empty = document.getElementById('rollupEmpty');
+  if (!filtered.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+  tbody.innerHTML = filtered.map(i => `
+    <tr>
+      <td><span class="badge badge-${i.sbu.toLowerCase().replace('&','')}">${esc(i.sbu)}</span></td>
+      <td>${esc(i.adoId)}</td>
+      <td>${esc(i.type)}</td>
+      <td>${esc(i.title)}</td>
+      <td>${esc(i.requestor || '—')}</td>
+      <td><button class="btn btn-danger" style="padding:3px 10px;font-size:11px;" onclick="removeItem(${i.id})">✕</button></td>
+    </tr>
+  `).join('');
+}
+
+// ══════════════════════════════════════════════
+// STEP 2 — TRIAGE
+// ══════════════════════════════════════════════
+function renderTriageTable() {
+  const sbuFilter = document.getElementById('triageFilterSbu').value;
+  const filtered = items.filter(i => !sbuFilter || i.sbu === sbuFilter);
+  const tbody = document.getElementById('triageBody');
+  const empty = document.getElementById('triageEmpty');
+  if (!filtered.length) { tbody.innerHTML = ''; empty.style.display = ''; return; }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map(i => {
+    const total = computeItemScore(i);
+    const pBadge = priorityBadge(total);
+    return `<tr>
+      <td><span class="badge badge-${i.sbu.toLowerCase().replace('&','')}">${esc(i.sbu)}</span></td>
+      <td>${esc(i.adoId)}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${esc(i.title)}</td>
+      ${CRITERIA.map(c => `<td><select onchange="setScore(${i.id},'${c}',this.value)" style="width:50px;padding:3px;border:1px solid #ddd;border-radius:4px;font-size:12px;text-align:center;">
+        ${[0,1,2,3,4,5].map(v => `<option value="${v}" ${i.scores[c]===v?'selected':''}>${v}</option>`).join('')}
+      </select></td>`).join('')}
+      <td><strong>${total}</strong></td>
+      <td>${pBadge}</td>
+    </tr>`;
+  }).join('');
+}
+
+function setScore(itemId, criterion, val) {
+  const item = items.find(i => i.id === itemId);
+  if (item) {
+    item.scores[criterion] = parseInt(val);
+    renderTriageTable();
+  }
+}
+
+function computeItemScore(item) {
+  let total = 0;
+  CRITERIA.forEach(c => { total += (item.scores[c] || 0) * CRITERIA_WEIGHTS[c]; });
+  item.totalScore = total;
+  return total;
+}
+
+function autoScore() {
+  items.forEach(item => {
+    CRITERIA.forEach(c => {
+      item.scores[c] = Math.floor(Math.random() * 5) + 1;
+    });
+    computeItemScore(item);
+  });
+  renderTriageTable();
+  showToast('Auto-scoring applied (heuristic). Review & adjust.');
+}
+
+function computePriorities() {
+  items.forEach(i => computeItemScore(i));
+  items.sort((a,b) => b.totalScore - a.totalScore);
+  const n = items.length;
+  items.forEach((item, idx) => {
+    const pct = n > 1 ? idx / (n - 1) : 0;
+    if (pct <= 0.15) item.priority = 'Critical';
+    else if (pct <= 0.40) item.priority = 'High';
+    else if (pct <= 0.75) item.priority = 'Medium';
+    else item.priority = 'Low';
+  });
+}
+
+function priorityBadge(score) {
+  if (score >= 100) return '<span class="badge badge-critical">Critical</span>';
+  if (score >= 70) return '<span class="badge badge-high">High</span>';
+  if (score >= 40) return '<span class="badge badge-medium">Medium</span>';
+  return '<span class="badge badge-low">Low</span>';
+}
+
+// ══════════════════════════════════════════════
+// STEP 3 — RANKED OUTPUT
+// ══════════════════════════════════════════════
+function renderRankedOutput() {
+  const sorted = [...items].sort((a,b) => b.totalScore - a.totalScore);
+  document.getElementById('outTotal').textContent = sorted.length;
+  document.getElementById('outCritical').textContent = sorted.filter(i => i.priority === 'Critical').length;
+  document.getElementById('outHigh').textContent = sorted.filter(i => i.priority === 'High').length;
+  const ml = sorted.filter(i => i.priority === 'Medium' || i.priority === 'Low').length;
+  document.getElementById('outMedLow').textContent = ml;
+
+  // Compute adjusted scores and re-sort
+  sorted.forEach(i => {
+    i.adjustedScore = i.effort > 0 ? Math.round(i.totalScore / i.effort * 10) / 10 : i.totalScore;
+  });
+  sorted.sort((a,b) => b.adjustedScore - a.adjustedScore);
+
+  // Re-assign priority based on adjusted ranking
+  const n = sorted.length;
+  sorted.forEach((item, idx) => {
+    const pct = n > 1 ? idx / (n - 1) : 0;
+    if (pct <= 0.15) item.priority = 'Critical';
+    else if (pct <= 0.40) item.priority = 'High';
+    else if (pct <= 0.75) item.priority = 'Medium';
+    else item.priority = 'Low';
+  });
+
+  document.getElementById('outCritical').textContent = sorted.filter(i => i.priority === 'Critical').length;
+  document.getElementById('outHigh').textContent = sorted.filter(i => i.priority === 'High').length;
+  const ml2 = sorted.filter(i => i.priority === 'Medium' || i.priority === 'Low').length;
+  document.getElementById('outMedLow').textContent = ml2;
+
+  // Auto-tag Medium/Low as deferred
+  items.forEach(i => {
+    if (i.priority === 'Medium' || i.priority === 'Low') i.approval = 'deferred';
+  });
+
+  // Capacity
+  updateCapacity();
+
+  // Table
+  document.getElementById('rankedBody').innerHTML = sorted.map((i,idx) => `
+    <tr>
+      <td><strong>${idx+1}</strong></td>
+      <td><span class="badge badge-${i.sbu.toLowerCase().replace('&','')}">${esc(i.sbu)}</span></td>
+      <td>${esc(i.adoId)}</td>
+      <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;">${esc(i.title)}</td>
+      <td>${i.totalScore}</td>
+      <td><input type="number" min="0" value="${i.effort||0}" style="width:70px;padding:4px 6px;border:1px solid #ddd;border-radius:4px;font-size:12px;text-align:center;" onchange="setEffort(${i.id},this.value)"></td>
+      <td><strong>${i.adjustedScore}</strong></td>
+      <td><span class="badge badge-${i.priority.toLowerCase()}">${i.priority}</span></td>
+    </tr>
+  `).join('');
+}
+
+function setEffort(itemId, val) {
+  const item = items.find(i => i.id === itemId);
+  if (item) item.effort = parseInt(val) || 0;
+  renderRankedOutput();
+}
+
+function updateCapacity() {
+  const cap = parseInt(document.getElementById('capTotalInput').value) || 120;
+  const totalEffort = items.reduce((s,i) => s + (i.effort || 0), 0);
+  const pct = Math.min(100, Math.round(totalEffort / cap * 100));
+  document.getElementById('capUsed').textContent = totalEffort;
+  const fill = document.getElementById('capFill');
+  fill.style.width = pct + '%';
+  fill.style.background = totalEffort > cap ? 'var(--red)' : pct > 80 ? 'var(--amber)' : 'var(--green)';
+}
+
+// ══════════════════════════════════════════════
+// STEP 4 — BUSINESS AND ENGINEERING ALIGNMENT
+// ══════════════════════════════════════════════
+function renderApprovalList() {
+  const sorted = [...items].filter(i => i.priority === 'Critical' || i.priority === 'High').sort((a,b) => b.totalScore - a.totalScore);
+  const list = document.getElementById('approvalList');
+  list.innerHTML = sorted.map(i => `
+    <div class="approval-item">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="badge badge-${i.sbu.toLowerCase().replace('&','')}">${esc(i.sbu)}</span>
+        <span style="font-weight:600;">${esc(i.adoId)}</span>
+        <span style="max-width:200px;overflow:hidden;text-overflow:ellipsis;display:inline-block;">${esc(i.title)}</span>
+        <span class="badge badge-${i.priority.toLowerCase()}">${i.priority}</span>
+        <span style="font-size:11px;color:var(--gray400);">Score: ${i.totalScore}</span>
+      </div>
+      <div style="display:flex;gap:6px;">
+        <button class="btn ${i.approval==='approved'?'btn-success':'btn-outline'}" style="padding:4px 12px;font-size:11px;" onclick="setApproval(${i.id},'approved')">✓ Approve</button>
+        <button class="btn ${i.approval==='deferred'?'btn-warning':'btn-outline'}" style="padding:4px 12px;font-size:11px;" onclick="setApproval(${i.id},'deferred')">⏸ Defer</button>
+      </div>
+    </div>
+  `).join('');
+  updateApprovalCounts();
+}
+
+function setApproval(id, status) {
+  const item = items.find(i => i.id === id);
+  if (item) item.approval = status;
+  renderApprovalList();
+}
+
+function updateApprovalCounts() {
+  document.getElementById('appApproved').textContent = items.filter(i => i.approval === 'approved').length;
+  document.getElementById('appDeferred').textContent = items.filter(i => i.approval === 'deferred').length;
+}
+
+function finalizeApproval() {
+  const pending = items.filter(i => i.approval === 'pending').length;
+  if (pending > 0) {
+    showToast(`${pending} item(s) still pending review.`);
+    return;
+  }
+  goToStep(4);
+}
+
+// ══════════════════════════════════════════════
+// STEP 5 — FINAL / CREATE
+// ══════════════════════════════════════════════
+function renderFinalStep() {
+  const approved = items.filter(i => i.approval === 'approved');
+  const deferred = items.filter(i => i.approval === 'deferred');
+  document.getElementById('finalApproved').textContent = approved.length;
+  document.getElementById('finalCreate').textContent = approved.length;
+
+  // Show deferred table
+  const deferredWrap = document.getElementById('deferredTableWrap');
+  if (deferred.length) {
+    deferredWrap.style.display = '';
+    document.getElementById('deferredBody').innerHTML = deferred.map(i => `
+      <tr>
+        <td><span class="badge badge-${i.sbu.toLowerCase().replace('&','')}">${esc(i.sbu)}</span></td>
+        <td>${esc(i.adoId)}</td>
+        <td>${esc(i.title)}</td>
+        <td>${i.totalScore}</td>
+        <td><span class="badge badge-${i.priority.toLowerCase()}">${i.priority}</span></td>
+        <td><span class="badge" style="background:#fef3c7;color:#b45309;">Deferred — Next Sprint</span></td>
+      </tr>
+    `).join('');
+  } else {
+    deferredWrap.style.display = 'none';
+  }
+}
+
+function executeCreate() {
+  const approved = items.filter(i => i.approval === 'approved');
+  if (!approved.length) { showToast('No approved items to create.'); return; }
+
+  // Simulate SXG ADO creation
+  approved.forEach((item, idx) => {
+    item.sxgId = 'SXG-' + (70000 + idx + 1);
+  });
+
+  const tbody = document.getElementById('finalBody');
+  tbody.innerHTML = approved.map(i => `
+    <tr>
+      <td><strong style="color:var(--blue);">${esc(i.sxgId)}</strong></td>
+      <td><span class="badge badge-${i.sbu.toLowerCase().replace('&','')}">${esc(i.sbu)}</span></td>
+      <td>${esc(i.adoId)}</td>
+      <td>${esc(i.title)}</td>
+      <td><span class="badge badge-${i.priority.toLowerCase()}">${i.priority}</span></td>
+      <td><span class="badge" style="background:#dcfce7;color:#15803d;">Created</span></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('finalTableWrap').style.display = '';
+  showToast(`${approved.length} SXG ADO(s) created. Notifications sent.`);
+}
+
+// ══════════════════════════════════════════════
+// EXPORT
+// ══════════════════════════════════════════════
+function exportCSV() {
+  const sorted = [...items].sort((a,b) => b.totalScore - a.totalScore);
+  let csv = 'Rank,SBU,ADO_ID,Title,Type,Classification,Score,Priority,Sprint,Effort_Days,Requestor\n';
+  sorted.forEach((i,idx) => {
+    csv += `${idx+1},${csvSafe(i.sbu)},${csvSafe(i.adoId)},${csvSafe(i.title)},${csvSafe(i.type)},${csvSafe(i.classification)},${i.totalScore},${csvSafe(i.priority)},${csvSafe(i.sprint)},${i.effort},${csvSafe(i.requestor)}\n`;
+  });
+  download(csv, 'cross-sbu-ado-prioritized.csv');
+}
+
+function exportFinalCSV() {
+  const approved = items.filter(i => i.approval === 'approved');
+  let csv = 'SXG_ADO_ID,Source_SBU,Orig_ADO,Title,Priority,Status\n';
+  approved.forEach(i => {
+    csv += `${csvSafe(i.sxgId)},${csvSafe(i.sbu)},${csvSafe(i.adoId)},${csvSafe(i.title)},${csvSafe(i.priority)},Created\n`;
+  });
+  download(csv, 'sxg-ado-created.csv');
+}
+
+function exportDeferredCSV() {
+  const deferred = items.filter(i => i.approval === 'deferred');
+  let csv = 'SBU,ADO_ID,Title,Score,Priority,Status\n';
+  deferred.forEach(i => {
+    csv += `${csvSafe(i.sbu)},${csvSafe(i.adoId)},${csvSafe(i.title)},${i.totalScore},${csvSafe(i.priority)},Deferred - Next Sprint\n`;
+  });
+  download(csv, 'deferred-next-sprint.csv');
+}
+
+function csvSafe(v) { v = String(v || ''); return v.includes(',') || v.includes('"') ? '"' + v.replace(/"/g, '""') + '"' : v; }
+function download(content, filename) {
+  const blob = new Blob([content], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ══════════════════════════════════════════════
+// SAMPLE DATA
+// ══════════════════════════════════════════════
+function loadSampleData() {
+  const samples = [
+    { sbu:'MSS', adoId:'401234', type:'Feature', title:'Auto-close stale service orders after 72h', requestor:'jdoe', classification:'Automation - New', sprint:'FY27 S1 Sprint 1', effort:8 },
+    { sbu:'MSS', adoId:'401235', type:'Feature', title:'SOM dashboard timeout on large date ranges', requestor:'tsmith', classification:'Bug Fix', sprint:'FY27 S1 Sprint 1', effort:3 },
+    { sbu:'MSS', adoId:'401236', type:'Feature', title:'Agent copilot integration for case summarization', requestor:'mchen', classification:'Automation - Enhancement', sprint:'FY27 S1 Sprint 2', effort:15 },
+    { sbu:'SCIM', adoId:'502100', type:'Feature', title:'Automated warranty validation lookup', requestor:'akumar', classification:'Automation - New', sprint:'FY27 S1 Sprint 1', effort:10 },
+    { sbu:'SCIM', adoId:'502101', type:'Feature', title:'SCIM self-service portal enhancements', requestor:'ywang', classification:'Tooling', sprint:'FY27 S1 Sprint 2', effort:12 },
+    { sbu:'SCIM', adoId:'502102', type:'Feature', title:'Migrate legacy reports to Power BI', requestor:'rjones', classification:'Data / Reporting', sprint:'FY27 S2', effort:6 },
+    { sbu:'A&I', adoId:'600300', type:'Feature', title:'End-to-end case automation pipeline', requestor:'pgarcia', classification:'Automation - New', sprint:'FY27 S1 Sprint 1', effort:20 },
+    { sbu:'A&I', adoId:'600301', type:'Feature', title:'TPUT reduction via smart routing', requestor:'lnguyen', classification:'Process Improvement', sprint:'FY27 S1 Sprint 2', effort:14 },
+    { sbu:'A&I', adoId:'600302', type:'Feature', title:'Duplicate case detection false positives', requestor:'kbrown', classification:'Bug Fix', sprint:'FY27 S1 Sprint 1', effort:4 },
+    { sbu:'TPC', adoId:'700450', type:'Feature', title:'Proactive outreach automation for known issues', requestor:'sdavis', classification:'Automation - New', sprint:'FY27 S1 Sprint 2', effort:18 },
+    { sbu:'TPC', adoId:'700451', type:'Feature', title:'TPC agent onboarding knowledge base', requestor:'jwilson', classification:'Tooling', sprint:'FY27 S2', effort:7 },
+    { sbu:'TPC', adoId:'700452', type:'Feature', title:'Infra cost optimization for TPC pipelines', requestor:'mmartinez', classification:'Infrastructure', sprint:'FY27 S1 Sprint 3', effort:5 },
+  ];
+  samples.forEach(s => {
+    items.push({
+      id: nextId++, ...s, desc: '',
+      scores: { tput:0, csat:0, costUsd:0, scale:0, strategic:0 },
+      totalScore: 0, priority: '', approval: 'pending', sxgId: ''
+    });
+  });
+  updateCounts();
+  renderRollupTable();
+  showToast('12 sample ADOs loaded across 4 SBUs.');
+}
+
+// ── Helpers ──
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+// ── Init ──
+updateCounts();
+renderRollupTable();
+</script>
+</body>
+</html>
